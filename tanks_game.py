@@ -11,6 +11,7 @@ KOEF_SPEED = 10
 SHOOT_DELAY = 2000
 BAR_HEIGHT = 50
 START_AMMO = 5
+SUPPLY_FR = 50000
 GRAY = (150, 150, 150)
 GREEN = (0, 200, 0)
 WHITE = (255, 255, 255)
@@ -19,6 +20,19 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
+
+class Supplises(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = supply_img
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.radius = 10
+
+    def update(self):
+        pass
+
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -109,7 +123,6 @@ class Player(pygame.sprite.Sprite):
             self.ypos = BAR_HEIGHT * KOEF_SPEED
         if self.rect.bottom > HEIGHT + 50:
             self.ypos = (HEIGHT + 50 - self.rect.height) * KOEF_SPEED
-
     def shoot(self):
         now = pygame.time.get_ticks()
         if now - self.last_shoot > SHOOT_DELAY and self.ammo > 0:
@@ -118,7 +131,6 @@ class Player(pygame.sprite.Sprite):
             all_sprites.add(bullet)
             self.ammo -= 1
             self.last_shoot = pygame.time.get_ticks()
-
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
         if self.hit_points <= 0:
@@ -130,6 +142,14 @@ class Player(pygame.sprite.Sprite):
             self.hit_points = 100
             self.looses += 1
             self.ammo = START_AMMO
+
+    def supplying(self):
+        x = random.randint(10, 40)
+        self.hit_points += x
+        if self.hit_points > 100:
+            self.hit_points = 100
+        self.ammo += (40 - x) // 10
+
 def draw_text(text, size, x, y):
     font = pygame.font.SysFont("arial", size)
     text_surface = font.render(text, True, BLACK)
@@ -148,9 +168,15 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
 clock = pygame.time.Clock()
+
+# загрузка изображений
+
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
+supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "supply.png"
+    )), (40, 40)).convert()
 grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
     )), (1000, 1000)).convert()
@@ -162,15 +188,18 @@ for i in range(2):
     shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
         r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
         )), (20, 20)).convert())
+
+# начало основной части 
+
 all_players = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
+all_supplies = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
-all_players.add(player1)
-all_players.add(player2)
+all_players.add(player1, player2)
 all_sprites.add(player1, player2)
-screen.fill(GRAY)
+
 running = True 
 while running:
     clock.tick(FPS)
@@ -221,7 +250,15 @@ while running:
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
+    prob_sup = random.randint(0, SUPPLY_FR)
+    if prob_sup < 50:
+        sup = Supplises(random.randint(50,950), random.randint(50, 750))
+        all_supplies.add(sup)
+        all_sprites.add(sup)
     all_sprites.update()
+    support = pygame.sprite.groupcollide(all_players, all_supplies, False, True, pygame.sprite.collide_circle)
+    for supp in support:
+        supp.supplying()
     hits = pygame.sprite.groupcollide(all_players, bullets, False, True, pygame.sprite.collide_circle)
     for hit in hits:
         hit.damage(40)
@@ -246,7 +283,11 @@ while running:
     pygame.draw.rect(screen, GREEN, [50, 10, player1.hit_points, 10])
     pygame.draw.rect(screen, GREEN, [WIDTH - 150, 10, player2.hit_points, 10])
     screen.blit(draw_ammobar(player1.ammo), (50, 30))
+    if player1.ammo > 10 :
+        draw_text("+", 20, 155, 23)
     screen.blit(draw_ammobar(player2.ammo), (WIDTH - 150, 30))
+    if player2.ammo > 10 :
+        draw_text("+", 20, WIDTH - 45, 23)
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
