@@ -3,19 +3,21 @@ import random
 import numpy 
 import pathlib
 
-WIDTH = 800
+WIDTH = 1000
 HEIGHT = 800 
 FPS = 30
 SPEED = 30
 ROTATE_SPEED = 1
 KOEF_SPEED = 10
+SHOOT_DELAY = 2000
+BAR_HEIGHT = 50
 GRAY = (150, 150, 150)
 GREEN = (0, 200, 0)
 WHITE = (255, 255, 255)
 RED = (250, 0, 0)
 BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
-SHOOT_DELAY = 2000
+
 
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
@@ -38,7 +40,6 @@ class Fires(pygame.sprite.Sprite):
         else:
             self.image = pygame.transform.rotate(shoot_img[self.current_img], self.rot)
             self.image.set_colorkey(WHITE)
-
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -60,7 +61,6 @@ class Bullet(pygame.sprite.Sprite):
         self.ypos = self.rect.y * KOEF_SPEED
         fires = Fires(*self.rect.center, fi)
         fires.add(all_sprites)
-
     def update(self):
         self.xpos -= self.speed_x
         self.ypos -= self.speed_y
@@ -69,7 +69,6 @@ class Bullet(pygame.sprite.Sprite):
         if (self.rect.x < 0 or self.rect.x > WIDTH or 
            self.rect.y < 0 or self.rect.y > HEIGHT):
            self.kill()
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -77,14 +76,17 @@ class Player(pygame.sprite.Sprite):
         self.image = self.image_orig.copy()
         self.image_orig.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
-        self.radius = 10
+        self.radius = 20
         self.rect.center = (x, y)
         self.xpos = self.rect.x * KOEF_SPEED
         self.ypos = self.rect.y * KOEF_SPEED
         self.rot = 0
         self.rot_speed = 0
         self.speed_forward = 0
+        self.hit_points = 100
+        self.bullets = 5
         self.last_shoot = pygame.time.get_ticks()
+        self.looses = 0
 
     def rotate(self):
         self.rot = (self.rot + self.rot_speed) % 360
@@ -93,7 +95,7 @@ class Player(pygame.sprite.Sprite):
         self.xpos -= (new_image.get_rect().width - self.rect.width) * KOEF_SPEED / 2
         self.ypos -= (new_image.get_rect().height - self.rect.height) * KOEF_SPEED / 2
         self.rect = self.image.get_rect()
-
+        #pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
 
     def update(self):
         self.rotate()
@@ -105,24 +107,43 @@ class Player(pygame.sprite.Sprite):
             self.rect.right = WIDTH + 50 
         if self.rect.left < -50:
             self.rect.left = -50 
-        if self.rect.top < -50:
-            self.rect.top = -50 
+        if self.rect.top < BAR_HEIGHT:
+            self.ypos = (BAR_HEIGHT + 1) * KOEF_SPEED
         if self.rect.bottom > HEIGHT + 50:
             self.rect.bottom = HEIGHT + 50 
 
     def shoot(self):
         now = pygame.time.get_ticks()
-        if now - self.last_shoot > SHOOT_DELAY:
+        if now - self.last_shoot > SHOOT_DELAY and self.bullets > 0:
             bullet = Bullet(self.rect.centerx, self.rect.centery, self.rot)
             bullets.add(bullet)
             all_sprites.add(bullet)
+            self.bullets -= 1
             self.last_shoot = pygame.time.get_ticks()
+
+    def damage(self, hp_lost):
+        self.hit_points -= hp_lost
+        if self.hit_points < 0:
+            self.xpos = WIDTH * KOEF_SPEED / 2
+            self.ypos = HEIGHT * KOEF_SPEED / 2
+            self.rot = 0
+            self.hit_points = 100
+            self.looses += 1
+
+def draw_text(text, size, x, y):
+    font = pygame.font.SysFont("arial", size)
+    text_surface = font.render(text, True, BLACK)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    screen.blit(text_surface, text_rect)
 
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
 clock = pygame.time.Clock()
+
+
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
@@ -132,7 +153,6 @@ for i in range(2):
     shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
         r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
         )), (20, 20)).convert())
-
 all_players = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
@@ -149,6 +169,20 @@ while running:
         if event.type == pygame.QUIT:
             running = False 
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                draw_text("PAUSE", 50, WIDTH / 2, HEIGHT / 2)
+                pygame.display.flip()
+                pause = True
+                while pause:
+                    clock.tick(FPS)
+                    for eventpause in pygame.event.get():
+                        if eventpause.type == pygame.KEYDOWN:
+                            if eventpause.key == pygame.K_p:
+                                pause = False
+                player1.speed_forward = 0
+                player2.speed_forward = 0
+                player1.rot_speed = 0
+                player2.rot_speed = 0
             if event.key == pygame.K_RSHIFT:
                 player1.shoot()
             if event.key == pygame.K_LSHIFT:
@@ -178,8 +212,13 @@ while running:
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
+
     all_sprites.update()
+    hits = pygame.sprite.groupcollide(all_players, bullets, False, True, pygame.sprite.collide_circle)
+    for hit in hits:
+        hit.damage(40)
     screen.fill(GRAY)
+    pygame.draw.rect(screen, (250, 200, 50), [0, 0, WIDTH, BAR_HEIGHT])
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
