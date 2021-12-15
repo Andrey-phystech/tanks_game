@@ -22,6 +22,21 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
+
+class Dot(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = dot_img
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.radius = 37
+        print(self.rect)
+        self.rect.x = x - 50
+        self.rect.y = y - 50
+
+    def update(self):
+        pass
+
 class Supplises(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -209,7 +224,6 @@ def keys_upravl():
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
-
 def spawn():
     prob_sup = random.randint(0, SUPPLY_FR)
     if prob_sup < 50:
@@ -218,11 +232,35 @@ def spawn():
         all_sprites.add(sup)
 
 def collids():
-    support = pygame.sprite.groupcollide(all_players, all_supplies, False, True, pygame.sprite.collide_circle)
-    for supp in support:
-        supp.supplying()
-    hits = pygame.sprite.groupcollide(all_players, bullets, False, True, pygame.sprite.collide_circle)
-    for hit in hits:
+    cols_dot_bul = pygame.sprite.groupcollide(
+        all_dots, bullets, 
+        False, True, pygame.sprite.collide_circle
+        )
+    cols_dot_sup = pygame.sprite.groupcollide(
+        all_dots, all_supplies, 
+        False, True, pygame.sprite.collide_circle
+        )
+    cols_player_dot = pygame.sprite.groupcollide(
+        all_players, all_dots, 
+        False, False, pygame.sprite.collide_circle
+        )
+    for item in cols_player_dot:
+        item.damage(2)
+        item.xpos += 2 * item.speed_forward * numpy.sin(numpy.pi * item.rot / 180)
+        item.ypos += 2 * item.speed_forward * numpy.cos(numpy.pi * item.rot / 180)
+
+
+    cols_suply_player = pygame.sprite.groupcollide(
+        all_players, all_supplies,
+        False, True, pygame.sprite.collide_circle
+        )
+    for item in cols_suply_player:
+        item.supplying()
+    cols_player_bullet = pygame.sprite.groupcollide(
+        all_players, bullets,
+        False, True, pygame.sprite.collide_circle
+        )
+    for hit in cols_player_bullet:
         hit.damage(40)
     for i in all_players:
         for j in all_players:
@@ -236,7 +274,6 @@ def collids():
                     i.damage(1)
                     i.xpos += 2 * i.speed_forward * numpy.sin(numpy.pi * i.rot / 180)
                     i.ypos += 2 * i.speed_forward * numpy.cos(numpy.pi * i.rot / 180)
-
 def interface():
     screen.blit(grass_surf, (0, 0))
     pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
@@ -252,7 +289,6 @@ def interface():
     screen.blit(draw_ammobar(player2.ammo), (WIDTH - 150, 30))
     if player2.ammo > 10 :
         draw_text("+", 20, WIDTH - 45, 23)
-
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
@@ -261,6 +297,9 @@ clock = pygame.time.Clock()
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
+dot_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "dot.png"
+    )), (100, 100)).convert()
 supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "supply.png"
     )), (40, 40)).convert()
@@ -279,11 +318,19 @@ for i in range(2):
 all_players = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_supplies = pygame.sprite.Group()
+all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
+
+dot = Dot(500, 400)
+all_dots.add(dot)
+all_sprites.add(dot)
+
 all_players.add(player1, player2)
 all_sprites.add(player1, player2)
+
+
 
 while GAME_RUNNUNG:
     clock.tick(FPS)
