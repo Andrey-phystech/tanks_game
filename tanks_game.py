@@ -2,7 +2,6 @@ import pygame
 import random
 import numpy 
 import pathlib
-
 GAME_RUNNUNG = True 
 WIDTH = 1000
 HEIGHT = 800 
@@ -161,7 +160,6 @@ def draw_ammobar(ammo):
         pygame.draw.rect(ammobar, RED, [i * 10 + 4, 0, 2, 1])
         pygame.draw.rect(ammobar, BLACK, [i * 10 + 3, 1, 4, 2])
     return ammobar
-
 def keys_upravl():
     global GAME_RUNNUNG
     for event in pygame.event.get():
@@ -212,53 +210,14 @@ def keys_upravl():
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
 
-
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("TANKS")
-clock = pygame.time.Clock()
-
-# загрузка изображений
-
-player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
-    )), (60, 60)).convert()
-supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "supply.png"
-    )), (40, 40)).convert()
-grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
-    )), (1000, 1000)).convert()
-grass_surf = pygame.Surface((1000, 1000))
-grass_surf.blit(grass_img, (0, 0))
-shoot_img = []
-for i in range(2):
-    filename = 'shoot{}.png'.format(i+1)
-    shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
-        r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
-        )), (20, 20)).convert())
-
-# начало основной части 
-
-all_players = pygame.sprite.Group()
-all_sprites = pygame.sprite.Group()
-all_supplies = pygame.sprite.Group()
-bullets = pygame.sprite.Group()
-player1 = Player(WIDTH / 4, HEIGHT / 4 )
-player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
-all_players.add(player1, player2)
-all_sprites.add(player1, player2)
-
-
-while GAME_RUNNUNG:
-    clock.tick(FPS)
-    keys_upravl()
+def spawn():
     prob_sup = random.randint(0, SUPPLY_FR)
     if prob_sup < 50:
         sup = Supplises(random.randint(50, WIDTH - 50), random.randint(BAR_HEIGHT, HEIGHT - 50))
         all_supplies.add(sup)
         all_sprites.add(sup)
-    all_sprites.update()
+
+def collids():
     support = pygame.sprite.groupcollide(all_players, all_supplies, False, True, pygame.sprite.collide_circle)
     for supp in support:
         supp.supplying()
@@ -277,6 +236,8 @@ while GAME_RUNNUNG:
                     i.damage(1)
                     i.xpos += 2 * i.speed_forward * numpy.sin(numpy.pi * i.rot / 180)
                     i.ypos += 2 * i.speed_forward * numpy.cos(numpy.pi * i.rot / 180)
+
+def interface():
     screen.blit(grass_surf, (0, 0))
     pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
     draw_text(str(player1.looses), 20, WIDTH / 2 + 50, 10)
@@ -291,6 +252,46 @@ while GAME_RUNNUNG:
     screen.blit(draw_ammobar(player2.ammo), (WIDTH - 150, 30))
     if player2.ammo > 10 :
         draw_text("+", 20, WIDTH - 45, 23)
+
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("TANKS")
+clock = pygame.time.Clock()
+# загрузка изображений
+player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
+    )), (60, 60)).convert()
+supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "supply.png"
+    )), (40, 40)).convert()
+grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
+    )), (1000, 1000)).convert()
+grass_surf = pygame.Surface((1000, 1000))
+grass_surf.blit(grass_img, (0, 0))
+shoot_img = []
+for i in range(2):
+    filename = 'shoot{}.png'.format(i+1)
+    shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
+        r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
+        )), (20, 20)).convert())
+# начало основной части 
+all_players = pygame.sprite.Group()
+all_sprites = pygame.sprite.Group()
+all_supplies = pygame.sprite.Group()
+bullets = pygame.sprite.Group()
+player1 = Player(WIDTH / 4, HEIGHT / 4 )
+player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
+all_players.add(player1, player2)
+all_sprites.add(player1, player2)
+
+while GAME_RUNNUNG:
+    clock.tick(FPS)
+    keys_upravl()
+    spawn()
+    all_sprites.update()
+    collids()
+    interface()
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
