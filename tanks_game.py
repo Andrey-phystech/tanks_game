@@ -10,7 +10,7 @@ KOEF_SPEED = 10
 SPEED = 3 * KOEF_SPEED
 BACK_SPEED = KOEF_SPEED
 ROTATE_SPEED = 2
-SHOOT_DELAY = 2000
+SHOOT_DELAY = 3500
 BAR_HEIGHT = 50
 START_AMMO = 10
 SUPPLY_FR = 30000
@@ -26,7 +26,6 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
-
 class Dummy(pygame.sprite.Sprite):
     def __init__(self, x, y, r):
         pygame.sprite.Sprite.__init__(self)
@@ -35,7 +34,6 @@ class Dummy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.radius = r
         self.rect.center = (x, y)
-
 class Mine(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -46,10 +44,9 @@ class Mine(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         all_sprites.add(self)
         all_mines.add(self)
-
+    
     def update(self):
         pass
-
 class Destroyed_tank(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -243,7 +240,7 @@ class Player(pygame.sprite.Sprite):
         if self.hit_points <= 0:
             Destroyed_tank(*self.rect.center, self.rot)
             Expl(*self.rect.center)
-            draw_dirt(*self.rect.center)
+            #draw_dirt(*self.rect.center)
             self.destroyed = pygame.time.get_ticks()
             self.xpos, self.ypos = check_coli(self.radius + 10)
             self.xpos -= self.rect.width / 2 
@@ -262,20 +259,6 @@ class Player(pygame.sprite.Sprite):
         if self.hit_points > 100:
             self.hit_points = 100
         self.ammo += (40 - x) // 10
-def draw_text(text, size, x, y):
-    font = pygame.font.SysFont("arial", size)
-    text_surface = font.render(text, True, BLACK)
-    text_rect = text_surface.get_rect()
-    text_rect.midtop = (x, y)
-    screen.blit(text_surface, text_rect)
-def draw_ammobar(ammo):
-    ammobar = pygame.Surface((100, 10))
-    ammobar.fill(BAR_COLOUR)
-    for i in range(ammo):
-        pygame.draw.rect(ammobar, YELLOW, [i * 7 + 2, 3, 5, 8])
-        pygame.draw.rect(ammobar, RED, [i * 7 + 4, 0, 1, 1])
-        pygame.draw.rect(ammobar, BLACK, [i * 7 + 3, 1, 3, 2])
-    return ammobar
 def keys_upravl():
     global GAME_RUNNUNG
     for event in pygame.event.get():
@@ -335,7 +318,6 @@ def spawn():
     prob_mine = random.randint(0, MINE_FR)
     if prob_mine < 50:
         Mine(*check_coli(20))
-
 def collids():
     cols_mine_destr = pygame.sprite.groupcollide(
         all_destr, all_mines,
@@ -370,7 +352,6 @@ def collids():
         item.damage(120)
         for jtem in cols_mine_player.get(item):
             Expl(*jtem.rect.center)
-
     cols_destr_expl = pygame.sprite.groupcollide(
         all_destr, all_expls,
         False, False, pygame.sprite.collide_circle
@@ -393,7 +374,7 @@ def collids():
         False, True, pygame.sprite.collide_circle
         )
     for hit in cols_destr_bullet:
-        hit.damage(40)
+        hit.damage(random.randint(30, 40))
     cols_destr_player = pygame.sprite.groupcollide(
         all_players, all_destr, 
         False, False, pygame.sprite.collide_circle
@@ -452,7 +433,8 @@ def collids():
         False, True, pygame.sprite.collide_circle
         )
     for hit in cols_bullet_player:
-        hit.damage(40)
+        hit.damage(random.randint(-100, 200))
+
     for i in all_players:
         for j in all_players:
             if not (i is j):
@@ -489,10 +471,18 @@ def interface():
             )
         else:
             pygame.draw.rect(screen, RED, [x - 10, y + 15, 20, 2])
+def draw_field():
+    screen.blit(grass_surf, (0, 0))
+    all_dots.draw(screen)
+    all_mines.draw(screen)
+    all_supplies.draw(screen)
+    all_destr.draw(screen)
+    all_players.draw(screen)
+    bullets.draw(screen)
+    all_expls.draw(screen)
 def draw_dirt(x, y):
     grass_surf.blit(pygame.transform.rotate(
         dirt, random.randint(0, 360)),(x - 40, y - 40))
-
 def check_coli(radius):
     not_founded = True
     while not_founded:
@@ -508,11 +498,22 @@ def check_coli(radius):
         not_founded = False
         if hits or hints:
             not_founded = True
-            print(x, y)
     return (x, y)
-
+def draw_text(text, size, x, y):
+    font = pygame.font.SysFont("arial", size)
+    text_surface = font.render(text, True, BLACK)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    screen.blit(text_surface, text_rect)
+def draw_ammobar(ammo):
+    ammobar = pygame.Surface((100, 10))
+    ammobar.fill(BAR_COLOUR)
+    for i in range(ammo):
+        pygame.draw.rect(ammobar, YELLOW, [i * 7 + 2, 3, 5, 8])
+        pygame.draw.rect(ammobar, RED, [i * 7 + 4, 0, 1, 1])
+        pygame.draw.rect(ammobar, BLACK, [i * 7 + 3, 1, 3, 2])
+    return ammobar
 # инициализация
-
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
@@ -539,7 +540,7 @@ supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     )), (40, 40)).convert()
 grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
-    )), (1000, 1000)).convert()
+    )), (1200, 1000)).convert()
 grass_surf = pygame.Surface((1000, 1000))
 grass_surf.blit(grass_img, (0, 0))
 shoot_img = []
@@ -563,7 +564,6 @@ all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 all_destr = pygame.sprite.Group()
 all_mines = pygame.sprite.Group()
-
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
 Dot(500, 400, 0)
@@ -577,9 +577,7 @@ while GAME_RUNNUNG:
     all_sprites.update()
     all_players.update()
     collids()
-    screen.blit(grass_surf, (0, 0))
-    all_sprites.draw(screen)
-    all_players.draw(screen)
+    draw_field()
     interface()
     pygame.display.flip()
 pygame.quit()
