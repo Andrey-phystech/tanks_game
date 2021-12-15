@@ -2,7 +2,6 @@ import pygame
 import random
 import numpy 
 import pathlib
-
 WIDTH = 1000
 HEIGHT = 800 
 FPS = 30
@@ -11,13 +10,15 @@ ROTATE_SPEED = 1
 KOEF_SPEED = 10
 SHOOT_DELAY = 2000
 BAR_HEIGHT = 50
+START_AMMO = 5
 GRAY = (150, 150, 150)
 GREEN = (0, 200, 0)
 WHITE = (255, 255, 255)
 RED = (250, 0, 0)
 BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
-
+YELLOW = (255, 255, 0)
+BAR_COLOUR = (250, 200, 50)
 
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
@@ -84,7 +85,7 @@ class Player(pygame.sprite.Sprite):
         self.rot_speed = 0
         self.speed_forward = 0
         self.hit_points = 100
-        self.bullets = 5
+        self.ammo = START_AMMO
         self.last_shoot = pygame.time.get_ticks()
         self.looses = 0
 
@@ -96,7 +97,6 @@ class Player(pygame.sprite.Sprite):
         self.ypos -= (new_image.get_rect().height - self.rect.height) * KOEF_SPEED / 2
         self.rect = self.image.get_rect()
         #pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-
     def update(self):
         self.rotate()
         self.xpos -= self.speed_forward * numpy.sin(numpy.pi * self.rot / 180)
@@ -111,14 +111,14 @@ class Player(pygame.sprite.Sprite):
             self.ypos = (BAR_HEIGHT + 1) * KOEF_SPEED
         if self.rect.bottom > HEIGHT + 50:
             self.rect.bottom = HEIGHT + 50 
-
+        
     def shoot(self):
         now = pygame.time.get_ticks()
-        if now - self.last_shoot > SHOOT_DELAY and self.bullets > 0:
+        if now - self.last_shoot > SHOOT_DELAY and self.ammo > 0:
             bullet = Bullet(self.rect.centerx, self.rect.centery, self.rot)
             bullets.add(bullet)
             all_sprites.add(bullet)
-            self.bullets -= 1
+            self.ammo -= 1
             self.last_shoot = pygame.time.get_ticks()
 
     def damage(self, hp_lost):
@@ -129,6 +129,7 @@ class Player(pygame.sprite.Sprite):
             self.rot = 0
             self.hit_points = 100
             self.looses += 1
+            self.ammo = START_AMMO
 
 def draw_text(text, size, x, y):
     font = pygame.font.SysFont("arial", size)
@@ -137,13 +138,20 @@ def draw_text(text, size, x, y):
     text_rect.midtop = (x, y)
     screen.blit(text_surface, text_rect)
 
+def draw_ammobar(ammo):
+    ammobar = pygame.Surface((100, 10))
+    ammobar.fill(BAR_COLOUR)
+    for i in range(ammo):
+        pygame.draw.rect(ammobar, YELLOW, [i * 10 + 2, 3, 6, 8])
+        pygame.draw.rect(ammobar, RED, [i * 10 + 4, 0, 2, 1])
+        pygame.draw.rect(ammobar, BLACK, [i * 10 + 3, 1, 4, 2])
+    return ammobar
+
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
 clock = pygame.time.Clock()
-
-
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
@@ -212,13 +220,32 @@ while running:
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
-
     all_sprites.update()
     hits = pygame.sprite.groupcollide(all_players, bullets, False, True, pygame.sprite.collide_circle)
     for hit in hits:
         hit.damage(40)
+    for i in all_players:
+        for j in all_players:
+            if not (i is j):
+                colision_group = pygame.sprite.Group()
+                colision_group.add(j)
+                coli = pygame.sprite.spritecollide(i, colision_group,
+                                     False, pygame.sprite.collide_circle
+                                     )
+                for hit in coli:
+                    i.damage(1)
+                    i.xpos += 2 * i.speed_forward * numpy.sin(numpy.pi * i.rot / 180)
+                    i.ypos += 2 * i.speed_forward * numpy.cos(numpy.pi * i.rot / 180)
     screen.fill(GRAY)
-    pygame.draw.rect(screen, (250, 200, 50), [0, 0, WIDTH, BAR_HEIGHT])
+    pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
+    draw_text(str(player1.looses), 20, WIDTH / 2 + 50, 10)
+    draw_text(str(player2.looses), 20, WIDTH / 2 - 50, 10)
+    pygame.draw.rect(screen, RED, [50, 10, 100, 10])
+    pygame.draw.rect(screen, RED, [WIDTH - 150, 10, 100, 10])
+    pygame.draw.rect(screen, GREEN, [50, 10, player1.hit_points, 10])
+    pygame.draw.rect(screen, GREEN, [WIDTH - 150, 10, player2.hit_points, 10])
+    screen.blit(draw_ammobar(player1.ammo), (50, 30))
+    screen.blit(draw_ammobar(player2.ammo), (WIDTH - 150, 30))
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
