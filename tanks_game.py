@@ -8,12 +8,13 @@ HEIGHT = 800
 FPS = 30
 SPEED = 30
 BACK_SPEED = 10
-ROTATE_SPEED = 1
+ROTATE_SPEED = 2
 KOEF_SPEED = 10
 SHOOT_DELAY = 2000
 BAR_HEIGHT = 50
-START_AMMO = 5
+START_AMMO = 10
 SUPPLY_FR = 30000
+RESPAWN_TIME = 5000
 GRAY = (150, 150, 150)
 GREEN = (0, 200, 0)
 WHITE = (255, 255, 255)
@@ -22,6 +23,29 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
+
+class Expl(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = expl_img[0]
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.radius = 50
+        self.rect.center = (x, y)
+        self.current_img = 0
+        self.time_change = pygame.time.get_ticks()
+        all_expls.add(self)
+
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.time_change > 100:
+            self.current_img += 1
+            self.time_change = now
+        if self.current_img == len(shoot_img):
+            self.kill()
+        else:
+            self.image = expl_img[self.current_img]
+            self.image.set_colorkey(WHITE)
 
 class Dot(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -33,10 +57,9 @@ class Dot(pygame.sprite.Sprite):
         print(self.rect)
         self.rect.x = x - 50
         self.rect.y = y - 50
-
+    
     def update(self):
         pass
-
 class Supplises(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -116,28 +139,40 @@ class Player(pygame.sprite.Sprite):
         self.ammo = START_AMMO
         self.last_shoot = pygame.time.get_ticks()
         self.looses = 0
+        self.destroyed = -5000
+        self.zn_sp = 1
+
     def rotate(self):
-        self.rot = (self.rot + self.rot_speed) % 360
+        self.rot = (self.rot + self.rot_speed * self.zn_sp) % 360
         new_image = pygame.transform.rotate(self.image_orig, self.rot)
         self.image = new_image
         self.xpos -= (new_image.get_rect().width - self.rect.width) * KOEF_SPEED / 2
         self.ypos -= (new_image.get_rect().height - self.rect.height) * KOEF_SPEED / 2
         self.rect = self.image.get_rect()
         #pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
+
     def update(self):
-        self.rotate()
-        self.xpos -= self.speed_forward * numpy.sin(numpy.pi * self.rot / 180)
-        self.ypos -= self.speed_forward * numpy.cos(numpy.pi * self.rot / 180)
-        self.rect.x = self.xpos / KOEF_SPEED
-        self.rect.y = self.ypos / KOEF_SPEED
-        if self.rect.right > WIDTH + 20:
-            self.xpos = (WIDTH  + 20 - self.rect.width) * KOEF_SPEED
-        if self.rect.left < -20:
-            self.xpos = -20 * KOEF_SPEED 
-        if self.rect.top < BAR_HEIGHT:
-            self.ypos = BAR_HEIGHT * KOEF_SPEED
-        if self.rect.bottom > HEIGHT + 20:
-            self.ypos = (HEIGHT + 20 - self.rect.height) * KOEF_SPEED
+        if self.speed_forward < 0:
+            self.zn_sp = -1
+        else:
+             self.zn_sp = 1
+        now = pygame.time.get_ticks()
+        if now - self.destroyed > RESPAWN_TIME:
+            self.rotate()
+            self.xpos -= self.speed_forward * numpy.sin(numpy.pi * self.rot / 180)
+            self.ypos -= self.speed_forward * numpy.cos(numpy.pi * self.rot / 180)
+            self.rect.x = self.xpos / KOEF_SPEED
+            self.rect.y = self.ypos / KOEF_SPEED
+            if self.rect.right > WIDTH + 20:
+                self.xpos = (WIDTH  + 20 - self.rect.width) * KOEF_SPEED
+            if self.rect.left < -20:
+                self.xpos = -20 * KOEF_SPEED 
+            if self.rect.top < BAR_HEIGHT:
+                self.ypos = BAR_HEIGHT * KOEF_SPEED
+            if self.rect.bottom > HEIGHT + 20:
+                self.ypos = (HEIGHT + 20 - self.rect.height) * KOEF_SPEED
+
+
     def shoot(self):
         now = pygame.time.get_ticks()
         if now - self.last_shoot > SHOOT_DELAY and self.ammo > 0:
@@ -149,8 +184,12 @@ class Player(pygame.sprite.Sprite):
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
         if self.hit_points <= 0:
+            exp = Expl(*self.rect.center)
+            all_sprites.add(exp)
+            self.destroyed = pygame.time.get_ticks()
             self.ypos = random.randint(BAR_HEIGHT + 50, HEIGHT - 50) * KOEF_SPEED
             self.xpos = random.randint(50, WIDTH - 50) * KOEF_SPEED
+            self.rect.center = (-200, random.randint(0, 800))
             self.rot = random.randint(0, 359)
             self.hit_points = 100
             self.looses += 1
@@ -197,7 +236,7 @@ def keys_upravl():
                 player2.rot_speed = 0
             if event.key == pygame.K_RSHIFT:
                 player1.shoot()
-            if event.key == pygame.K_LSHIFT:
+            if event.key == pygame.K_SPACE:
                 player2.shoot()
             if event.key == pygame.K_DOWN:
                 player1.speed_forward = -BACK_SPEED
@@ -232,6 +271,16 @@ def spawn():
         all_sprites.add(sup)
 
 def collids():
+    cols_expl_player = pygame.sprite.groupcollide(
+        all_players, all_expls, 
+        False, False, pygame.sprite.collide_circle
+        )
+    for item in cols_expl_player:
+        item.damage(10)
+    cols_expl_sup = pygame.sprite.groupcollide(
+        all_supplies, all_expls, 
+        True, False, pygame.sprite.collide_circle
+        )
     cols_dot_bul = pygame.sprite.groupcollide(
         all_dots, bullets, 
         False, True, pygame.sprite.collide_circle
@@ -245,11 +294,11 @@ def collids():
         False, False, pygame.sprite.collide_circle
         )
     for item in cols_player_dot:
-        item.damage(2)
+        item.damage(0)
         item.xpos += 2 * item.speed_forward * numpy.sin(numpy.pi * item.rot / 180)
         item.ypos += 2 * item.speed_forward * numpy.cos(numpy.pi * item.rot / 180)
 
-
+    
     cols_suply_player = pygame.sprite.groupcollide(
         all_players, all_supplies,
         False, True, pygame.sprite.collide_circle
@@ -271,9 +320,10 @@ def collids():
                                      False, pygame.sprite.collide_circle
                                      )
                 for hit in coli:
-                    i.damage(1)
+                    i.damage(0)
                     i.xpos += 2 * i.speed_forward * numpy.sin(numpy.pi * i.rot / 180)
                     i.ypos += 2 * i.speed_forward * numpy.cos(numpy.pi * i.rot / 180)
+
 def interface():
     screen.blit(grass_surf, (0, 0))
     pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
@@ -314,24 +364,28 @@ for i in range(2):
     shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
         r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
         )), (20, 20)).convert())
+expl_img = []
+for i in range(8):
+    filename = 'expl{}.png'.format(i)
+    expl_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
+        r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
+        )), (150, 150)).convert())
+
 # начало основной части 
+
 all_players = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
+all_expls = pygame.sprite.Group()
 all_supplies = pygame.sprite.Group()
 all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
-
 dot = Dot(500, 400)
 all_dots.add(dot)
 all_sprites.add(dot)
-
 all_players.add(player1, player2)
 all_sprites.add(player1, player2)
-
-
-
 while GAME_RUNNUNG:
     clock.tick(FPS)
     keys_upravl()
