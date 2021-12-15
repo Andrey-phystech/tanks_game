@@ -14,6 +14,7 @@ SHOOT_DELAY = 2000
 BAR_HEIGHT = 50
 START_AMMO = 10
 SUPPLY_FR = 30000
+MINE_FR = 30000
 RESPAWN_TIME = 5000
 DESTR_TANK_DRAG = 1 * KOEF_SPEED
 DESPAWN_DESTR_TANK_DELAY = 60000
@@ -26,7 +27,28 @@ BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
 
+class Dummy(pygame.sprite.Sprite):
+    def __init__(self, x, y, r):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((50, 50), pygame.SRCALPHA)
+        self.image.fill((0, 0, 0, 0))
+        self.rect = self.image.get_rect()
+        self.radius = r
+        self.rect.center = (x, y)
 
+class Mine(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = mine_img
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.radius = 8
+        self.rect.center = (x, y)
+        all_sprites.add(self)
+        all_mines.add(self)
+
+    def update(self):
+        pass
 
 class Destroyed_tank(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
@@ -45,7 +67,6 @@ class Destroyed_tank(pygame.sprite.Sprite):
         self.destr = pygame.time.get_ticks()
         all_sprites.add(self)
         all_destr.add(self)
-
     def update(self):
         self.rect.x = self.xpos / KOEF_SPEED
         self.rect.y = self.ypos / KOEF_SPEED
@@ -58,7 +79,6 @@ class Destroyed_tank(pygame.sprite.Sprite):
         if self.hit_points <= 0:
             Expl(*self.rect.center)
             self.kill()
-
 class Expl(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -71,7 +91,6 @@ class Expl(pygame.sprite.Sprite):
         self.time_change = pygame.time.get_ticks()
         all_expls.add(self)
         all_sprites.add(self)
-
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.time_change > 100:
@@ -82,7 +101,6 @@ class Expl(pygame.sprite.Sprite):
         else:
             self.image = expl_img[self.current_img]
             self.image.set_colorkey(WHITE)
-
 class Dot(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -90,12 +108,11 @@ class Dot(pygame.sprite.Sprite):
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.radius = 37
-        print(self.rect)
         self.rect.x = x - 50
         self.rect.y = y - 50
         all_sprites.add(self)
         all_dots.add(self)
-
+    
     def update(self):
         pass
 class Supplises(pygame.sprite.Sprite):
@@ -108,10 +125,8 @@ class Supplises(pygame.sprite.Sprite):
         self.radius = 15
         all_supplies.add(self)
         all_sprites.add(self) 
-
     def update(self):
         pass
-
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -124,7 +139,6 @@ class Fires(pygame.sprite.Sprite):
         self.current_img = 0
         self.time_change = pygame.time.get_ticks()
         all_sprites.add(self)
-
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.time_change > 100:
@@ -157,7 +171,6 @@ class Bullet(pygame.sprite.Sprite):
         Fires(*self.rect.center, fi)
         bullets.add(self)
         all_sprites.add(self)
-
     def update(self):
         self.xpos -= self.speed_x
         self.ypos -= self.speed_y
@@ -189,7 +202,6 @@ class Player(pygame.sprite.Sprite):
         self.destroyed = -5000
         self.zn_sp = 1
         all_players.add(self)
-
     def rotate(self):
         self.rot = (self.rot + self.rot_speed * self.zn_sp) % 360
         new_image = pygame.transform.rotate(self.image_orig, self.rot)
@@ -226,7 +238,6 @@ class Player(pygame.sprite.Sprite):
             Bullet(self.rect.centerx, self.rect.centery, self.rot)
             self.ammo -= 1
             self.last_shoot = pygame.time.get_ticks()
-
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
         if self.hit_points <= 0:
@@ -234,8 +245,11 @@ class Player(pygame.sprite.Sprite):
             Expl(*self.rect.center)
             draw_dirt(*self.rect.center)
             self.destroyed = pygame.time.get_ticks()
-            self.ypos = random.randint(BAR_HEIGHT + 50, HEIGHT - 50) * KOEF_SPEED
-            self.xpos = random.randint(50, WIDTH - 50) * KOEF_SPEED
+            self.xpos, self.ypos = check_coli(self.radius + 10)
+            self.xpos -= self.rect.width / 2 
+            self.ypos -= self.rect.height / 2
+            self.xpos *= KOEF_SPEED
+            self.ypos *= KOEF_SPEED
             self.rect.center = (-200, random.randint(0, 800))
             self.rot = random.randint(0, 359)
             self.hit_points = 100
@@ -262,7 +276,6 @@ def draw_ammobar(ammo):
         pygame.draw.rect(ammobar, RED, [i * 7 + 4, 0, 1, 1])
         pygame.draw.rect(ammobar, BLACK, [i * 7 + 3, 1, 3, 2])
     return ammobar
-
 def keys_upravl():
     global GAME_RUNNUNG
     for event in pygame.event.get():
@@ -318,9 +331,46 @@ def keys_upravl():
 def spawn():
     prob_sup = random.randint(0, SUPPLY_FR)
     if prob_sup < 50:
-        Supplises(random.randint(50, WIDTH - 50), random.randint(BAR_HEIGHT, HEIGHT - 50))
+        Supplises(*check_coli(20))
+    prob_mine = random.randint(0, MINE_FR)
+    if prob_mine < 50:
+        Mine(*check_coli(20))
 
 def collids():
+    cols_mine_destr = pygame.sprite.groupcollide(
+        all_destr, all_mines,
+        False, True, pygame.sprite.collide_circle
+        )
+    for item in cols_mine_destr:
+        item.damage(120)
+        for jtem in cols_mine_destr.get(item):
+            Expl(*jtem.rect.center)
+    cols_mine_expl = pygame.sprite.groupcollide(
+        all_mines, all_expls,
+        True, False, pygame.sprite.collide_circle
+        )
+    for item in cols_mine_expl:
+        Expl(*item.rect.center)
+    cols_mine_dot = pygame.sprite.groupcollide(
+        all_mines, all_dots,
+        True, False, pygame.sprite.collide_circle
+        )
+    cols_mine_sup = 0
+    cols_mine_bullet = pygame.sprite.groupcollide(
+        all_mines, bullets,
+        True, True, pygame.sprite.collide_circle
+        )
+    for item in cols_mine_bullet:
+        Expl(*item.rect.center)
+    cols_mine_player = pygame.sprite.groupcollide(
+        all_players, all_mines,
+        False, True, pygame.sprite.collide_circle
+        )
+    for item in cols_mine_player:
+        item.damage(120)
+        for jtem in cols_mine_player.get(item):
+            Expl(*jtem.rect.center)
+
     cols_destr_expl = pygame.sprite.groupcollide(
         all_destr, all_expls,
         False, False, pygame.sprite.collide_circle
@@ -356,7 +406,6 @@ def collids():
             jtem.ypos += jtem.speed_y
         item.xpos -= 1.1 * item.speed_x
         item.ypos -= 1.1 * item.speed_y
-
     cols_expl_dot = 0
     cols_expl_sup = pygame.sprite.groupcollide(
         all_supplies, all_expls, 
@@ -371,7 +420,6 @@ def collids():
         )
     for item in cols_expl_player:
         item.damage(10)
-
     cols_dot_sup = pygame.sprite.groupcollide(
         all_dots, all_supplies, 
         False, True, pygame.sprite.collide_circle
@@ -387,7 +435,6 @@ def collids():
     for item in cols_dot_player:
         item.xpos -= 2 * item.speed_x
         item.ypos -= 2 * item.speed_y
-
     cols_suply_bullet = pygame.sprite.groupcollide(
         all_supplies, bullets,
         True, True, pygame.sprite.collide_circle
@@ -400,14 +447,12 @@ def collids():
         )
     for item in cols_suply_player:
         item.supplying()
-
     cols_bullet_player = pygame.sprite.groupcollide(
         all_players, bullets,
         False, True, pygame.sprite.collide_circle
         )
     for hit in cols_bullet_player:
         hit.damage(40)
-
     for i in all_players:
         for j in all_players:
             if not (i is j):
@@ -448,6 +493,24 @@ def draw_dirt(x, y):
     grass_surf.blit(pygame.transform.rotate(
         dirt, random.randint(0, 360)),(x - 40, y - 40))
 
+def check_coli(radius):
+    not_founded = True
+    while not_founded:
+        y = random.randint(BAR_HEIGHT + 50, HEIGHT - 50)
+        x = random.randint(50, WIDTH - 50)
+        dum = Dummy(x , y, radius)
+        hits = pygame.sprite.spritecollide(dum, all_sprites, 
+            False, pygame.sprite.collide_circle
+            )
+        hints = pygame.sprite.spritecollide(dum, all_players,
+            False, pygame.sprite.collide_circle
+            )
+        not_founded = False
+        if hits or hints:
+            not_founded = True
+            print(x, y)
+    return (x, y)
+
 # инициализация
 
 pygame.init()
@@ -464,7 +527,7 @@ player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     )), (60, 60)).convert()
 mine_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "mine.png"
-    )), (40, 40)).convert()
+    )), (15, 15)).convert()
 destr_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "destr_tank.png"
     )), (60, 60)).convert()
@@ -499,16 +562,14 @@ all_supplies = pygame.sprite.Group()
 all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 all_destr = pygame.sprite.Group()
+all_mines = pygame.sprite.Group()
 
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
-
 Dot(500, 400, 0)
 Dot(300, 200, 50)
 Dot(800, 600, -130)
-
 #all_sprites.add(player1, player2)
-
 while GAME_RUNNUNG:
     clock.tick(FPS)
     keys_upravl()
