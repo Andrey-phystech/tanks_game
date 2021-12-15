@@ -2,6 +2,7 @@ import pygame
 import random
 import numpy 
 import pathlib
+
 GAME_RUNNUNG = True 
 WIDTH = 1000
 HEIGHT = 800 
@@ -60,6 +61,7 @@ class Dot(pygame.sprite.Sprite):
     
     def update(self):
         pass
+
 class Supplises(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -71,6 +73,7 @@ class Supplises(pygame.sprite.Sprite):
     
     def update(self):
         pass
+
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -92,6 +95,7 @@ class Fires(pygame.sprite.Sprite):
         else:
             self.image = pygame.transform.rotate(shoot_img[self.current_img], self.rot)
             self.image.set_colorkey(WHITE)
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -113,6 +117,7 @@ class Bullet(pygame.sprite.Sprite):
         self.ypos = self.rect.y * KOEF_SPEED
         fires = Fires(*self.rect.center, fi)
         fires.add(all_sprites)
+
     def update(self):
         self.xpos -= self.speed_x
         self.ypos -= self.speed_y
@@ -121,6 +126,7 @@ class Bullet(pygame.sprite.Sprite):
         if (self.rect.x < 0 or self.rect.x > WIDTH or 
            self.rect.y < 0 or self.rect.y > HEIGHT):
            self.kill()
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -181,6 +187,7 @@ class Player(pygame.sprite.Sprite):
             all_sprites.add(bullet)
             self.ammo -= 1
             self.last_shoot = pygame.time.get_ticks()
+
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
         if self.hit_points <= 0:
@@ -194,18 +201,21 @@ class Player(pygame.sprite.Sprite):
             self.hit_points = 100
             self.looses += 1
             self.ammo = START_AMMO
+
     def supplying(self):
         x = random.randint(10, 40)
         self.hit_points += x
         if self.hit_points > 100:
             self.hit_points = 100
         self.ammo += (40 - x) // 10
+
 def draw_text(text, size, x, y):
     font = pygame.font.SysFont("arial", size)
     text_surface = font.render(text, True, BLACK)
     text_rect = text_surface.get_rect()
     text_rect.midtop = (x, y)
     screen.blit(text_surface, text_rect)
+
 def draw_ammobar(ammo):
     ammobar = pygame.Surface((100, 10))
     ammobar.fill(BAR_COLOUR)
@@ -214,6 +224,7 @@ def draw_ammobar(ammo):
         pygame.draw.rect(ammobar, RED, [i * 10 + 4, 0, 2, 1])
         pygame.draw.rect(ammobar, BLACK, [i * 10 + 3, 1, 4, 2])
     return ammobar
+
 def keys_upravl():
     global GAME_RUNNUNG
     for event in pygame.event.get():
@@ -227,11 +238,23 @@ def keys_upravl():
                 while pause:
                     clock.tick(FPS)
                     for eventpause in pygame.event.get():
+
                         if eventpause.type == pygame.KEYDOWN:
+
                             if eventpause.key == pygame.K_p:
+
                                 pause = False
+
+                        if eventpause.type == pygame.QUIT:
+
+                            GAME_RUNNUNG = False 
+
+                            pause = False
+
                 player1.speed_forward = 0
+
                 player2.speed_forward = 0
+
                 player1.rot_speed = 0
                 player2.rot_speed = 0
             if event.key == pygame.K_RSHIFT:
@@ -263,6 +286,7 @@ def keys_upravl():
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
+
 def spawn():
     prob_sup = random.randint(0, SUPPLY_FR)
     if prob_sup < 50:
@@ -339,11 +363,14 @@ def interface():
     screen.blit(draw_ammobar(player2.ammo), (WIDTH - 150, 30))
     if player2.ammo > 10 :
         draw_text("+", 20, WIDTH - 45, 23)
+
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
 clock = pygame.time.Clock()
+
 # загрузка изображений
+
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
@@ -381,11 +408,16 @@ all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player1 = Player(WIDTH / 4, HEIGHT / 4 )
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
+
 dot = Dot(500, 400)
 all_dots.add(dot)
 all_sprites.add(dot)
+
 all_players.add(player1, player2)
 all_sprites.add(player1, player2)
+
+
+
 while GAME_RUNNUNG:
     clock.tick(FPS)
     keys_upravl()
