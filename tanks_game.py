@@ -19,7 +19,6 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
-
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -88,7 +87,6 @@ class Player(pygame.sprite.Sprite):
         self.ammo = START_AMMO
         self.last_shoot = pygame.time.get_ticks()
         self.looses = 0
-
     def rotate(self):
         self.rot = (self.rot + self.rot_speed) % 360
         new_image = pygame.transform.rotate(self.image_orig, self.rot)
@@ -103,15 +101,15 @@ class Player(pygame.sprite.Sprite):
         self.ypos -= self.speed_forward * numpy.cos(numpy.pi * self.rot / 180)
         self.rect.x = self.xpos / KOEF_SPEED
         self.rect.y = self.ypos / KOEF_SPEED
-        if self.rect.right > WIDTH + 50:
-            self.rect.right = WIDTH + 50 
-        if self.rect.left < -50:
-            self.rect.left = -50 
+        if self.rect.right > WIDTH + 20:
+            self.xpos = (WIDTH  + 20 - self.rect.width) * KOEF_SPEED
+        if self.rect.left < -20:
+            self.xpos = -20 * KOEF_SPEED 
         if self.rect.top < BAR_HEIGHT:
-            self.ypos = (BAR_HEIGHT + 1) * KOEF_SPEED
+            self.ypos = BAR_HEIGHT * KOEF_SPEED
         if self.rect.bottom > HEIGHT + 50:
-            self.rect.bottom = HEIGHT + 50 
-        
+            self.ypos = (HEIGHT + 50 - self.rect.height) * KOEF_SPEED
+
     def shoot(self):
         now = pygame.time.get_ticks()
         if now - self.last_shoot > SHOOT_DELAY and self.ammo > 0:
@@ -123,21 +121,21 @@ class Player(pygame.sprite.Sprite):
 
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
-        if self.hit_points < 0:
-            self.xpos = WIDTH * KOEF_SPEED / 2
-            self.ypos = HEIGHT * KOEF_SPEED / 2
-            self.rot = 0
+        if self.hit_points <= 0:
+            self.ypos = random.randint(BAR_HEIGHT + 50, HEIGHT - 50) * KOEF_SPEED
+            self.xpos = random.randint(50, WIDTH - 50) * KOEF_SPEED
+            # self.xpos = WIDTH * KOEF_SPEED / 2
+            # self.ypos = HEIGHT * KOEF_SPEED / 2
+            self.rot = random.randint(0, 359)
             self.hit_points = 100
             self.looses += 1
             self.ammo = START_AMMO
-
 def draw_text(text, size, x, y):
     font = pygame.font.SysFont("arial", size)
     text_surface = font.render(text, True, BLACK)
     text_rect = text_surface.get_rect()
     text_rect.midtop = (x, y)
     screen.blit(text_surface, text_rect)
-
 def draw_ammobar(ammo):
     ammobar = pygame.Surface((100, 10))
     ammobar.fill(BAR_COLOUR)
@@ -146,8 +144,6 @@ def draw_ammobar(ammo):
         pygame.draw.rect(ammobar, RED, [i * 10 + 4, 0, 2, 1])
         pygame.draw.rect(ammobar, BLACK, [i * 10 + 3, 1, 4, 2])
     return ammobar
-
-
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
@@ -155,6 +151,11 @@ clock = pygame.time.Clock()
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
     r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
+grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
+    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
+    )), (1000, 1000)).convert()
+grass_surf = pygame.Surface((1000, 1000))
+grass_surf.blit(grass_img, (0, 0))
 shoot_img = []
 for i in range(2):
     filename = 'shoot{}.png'.format(i+1)
@@ -236,7 +237,7 @@ while running:
                     i.damage(1)
                     i.xpos += 2 * i.speed_forward * numpy.sin(numpy.pi * i.rot / 180)
                     i.ypos += 2 * i.speed_forward * numpy.cos(numpy.pi * i.rot / 180)
-    screen.fill(GRAY)
+    screen.blit(grass_surf, (0, 0))
     pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
     draw_text(str(player1.looses), 20, WIDTH / 2 + 50, 10)
     draw_text(str(player2.looses), 20, WIDTH / 2 - 50, 10)
