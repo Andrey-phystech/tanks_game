@@ -2,6 +2,8 @@ import pygame
 import random
 import numpy 
 import pathlib
+from sys import argv as sysargv
+
 GAME_RUNNUNG = True 
 WIDTH = 1000
 HEIGHT = 800 
@@ -26,6 +28,7 @@ BLUE = (0, 0, 250)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 BAR_COLOUR = (250, 200, 50)
+
 class Dummy(pygame.sprite.Sprite):
     def __init__(self, x, y, r):
         pygame.sprite.Sprite.__init__(self)
@@ -34,6 +37,7 @@ class Dummy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.radius = r
         self.rect.center = (x, y)
+
 class Mine(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -47,6 +51,7 @@ class Mine(pygame.sprite.Sprite):
     
     def update(self):
         pass
+
 class Destroyed_tank(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -64,6 +69,7 @@ class Destroyed_tank(pygame.sprite.Sprite):
         self.destr = pygame.time.get_ticks()
         all_sprites.add(self)
         all_destr.add(self)
+        
     def update(self):
         self.rect.x = self.xpos / KOEF_SPEED
         self.rect.y = self.ypos / KOEF_SPEED
@@ -76,6 +82,7 @@ class Destroyed_tank(pygame.sprite.Sprite):
         if self.hit_points <= 0:
             Expl(*self.rect.center)
             self.kill()
+
 class Expl(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -88,6 +95,7 @@ class Expl(pygame.sprite.Sprite):
         self.time_change = pygame.time.get_ticks()
         all_expls.add(self)
         all_sprites.add(self)
+
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.time_change > 100:
@@ -98,6 +106,7 @@ class Expl(pygame.sprite.Sprite):
         else:
             self.image = expl_img[self.current_img]
             self.image.set_colorkey(WHITE)
+
 class Dot(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -112,6 +121,7 @@ class Dot(pygame.sprite.Sprite):
     
     def update(self):
         pass
+
 class Supplises(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -121,9 +131,11 @@ class Supplises(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.radius = 15
         all_supplies.add(self)
-        all_sprites.add(self) 
+        all_sprites.add(self)
+
     def update(self):
         pass
+
 class Fires(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -136,6 +148,7 @@ class Fires(pygame.sprite.Sprite):
         self.current_img = 0
         self.time_change = pygame.time.get_ticks()
         all_sprites.add(self)
+
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.time_change > 100:
@@ -146,6 +159,7 @@ class Fires(pygame.sprite.Sprite):
         else:
             self.image = pygame.transform.rotate(shoot_img[self.current_img], self.rot)
             self.image.set_colorkey(WHITE)
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, fi):
         pygame.sprite.Sprite.__init__(self)
@@ -168,6 +182,7 @@ class Bullet(pygame.sprite.Sprite):
         Fires(*self.rect.center, fi)
         bullets.add(self)
         all_sprites.add(self)
+
     def update(self):
         self.xpos -= self.speed_x
         self.ypos -= self.speed_y
@@ -176,6 +191,7 @@ class Bullet(pygame.sprite.Sprite):
         if (self.rect.x < 0 or self.rect.x > WIDTH or 
            self.rect.y < 0 or self.rect.y > HEIGHT):
            self.kill()
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -199,6 +215,7 @@ class Player(pygame.sprite.Sprite):
         self.destroyed = -5000
         self.zn_sp = 1
         all_players.add(self)
+
     def rotate(self):
         self.rot = (self.rot + self.rot_speed * self.zn_sp) % 360
         new_image = pygame.transform.rotate(self.image_orig, self.rot)
@@ -207,6 +224,7 @@ class Player(pygame.sprite.Sprite):
         self.ypos -= (new_image.get_rect().height - self.rect.height) * KOEF_SPEED / 2
         self.rect = self.image.get_rect()
         #pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
+
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.destroyed > RESPAWN_TIME:
@@ -229,12 +247,14 @@ class Player(pygame.sprite.Sprite):
                 self.ypos = BAR_HEIGHT * KOEF_SPEED
             if self.rect.bottom > HEIGHT + 20:
                 self.ypos = (HEIGHT + 20 - self.rect.height) * KOEF_SPEED
+
     def shoot(self):
         now = pygame.time.get_ticks()
         if now - self.last_shoot > SHOOT_DELAY and self.ammo > 0:
             Bullet(self.rect.centerx, self.rect.centery, self.rot)
             self.ammo -= 1
             self.last_shoot = pygame.time.get_ticks()
+
     def damage(self, hp_lost):
         self.hit_points -= hp_lost
         if self.hit_points <= 0:
@@ -259,6 +279,7 @@ class Player(pygame.sprite.Sprite):
         if self.hit_points > 100:
             self.hit_points = 100
         self.ammo += (40 - x) // 10
+
 def keys_upravl():
     global GAME_RUNNUNG
     for event in pygame.event.get():
@@ -311,6 +332,7 @@ def keys_upravl():
                 player2.speed_forward = 0
             if event.key == pygame.K_a or event.key == pygame.K_d:
                 player2.rot_speed = 0
+
 def spawn():
     prob_sup = random.randint(0, SUPPLY_FR)
     if prob_sup < 50:
@@ -318,6 +340,7 @@ def spawn():
     prob_mine = random.randint(0, MINE_FR)
     if prob_mine < 50:
         Mine(*check_coli(20))
+
 def collids():
     cols_mine_destr = pygame.sprite.groupcollide(
         all_destr, all_mines,
@@ -433,7 +456,7 @@ def collids():
         False, True, pygame.sprite.collide_circle
         )
     for hit in cols_bullet_player:
-        hit.damage(random.randint(-100, 200))
+        hit.damage(random.randint(25, 45))
 
     for i in all_players:
         for j in all_players:
@@ -447,23 +470,28 @@ def collids():
                     i.damage(0)
                     i.xpos -= 2 * i.speed_x
                     i.ypos -= 2 * i.speed_y
+
 def interface():
     pygame.draw.rect(screen, BAR_COLOUR, [0, 0, WIDTH, BAR_HEIGHT])
-    draw_text(str(player2.looses), 20, WIDTH / 2 + 50, 10)
-    draw_text(str(player1.looses), 20, WIDTH / 2 - 50, 10)
+    draw_text(str(player2.looses), 20, WIDTH / 2 + 50, 10, BLACK)
+    draw_text(str(player1.looses), 20, WIDTH / 2 - 50, 10, BLACK)
     pygame.draw.rect(screen, RED, [50, 10, 100, 10])
     pygame.draw.rect(screen, RED, [WIDTH - 150, 10, 100, 10])
     pygame.draw.rect(screen, GREEN, [50, 10, player2.hit_points, 10])
     pygame.draw.rect(screen, GREEN, [WIDTH - 150, 10, player1.hit_points, 10])
     screen.blit(draw_ammobar(player2.ammo), (50, 30))
     if player2.ammo > 14 :
-        draw_text("+", 20, 155, 23)
+        draw_text("+", 20, 155, 23, BLACK)
     screen.blit(draw_ammobar(player1.ammo), (WIDTH - 150, 30))
     if player1.ammo > 14 :
-        draw_text("+", 20, WIDTH - 45, 23)
+        draw_text("+", 20, WIDTH - 45, 23, BLACK)
     now = pygame.time.get_ticks()
     for pl in all_players:
         x, y = pl.rect.center
+        if pl is player1:
+            draw_text(player_1_name, 20, x, y - 50, RED)
+        else:
+            draw_text(player_2_name, 20, x, y - 50, RED)
         pygame.draw.rect(screen, BLUE, [x - 10, y + 15, 20, 2])
         if (now - pl.last_shoot) < SHOOT_DELAY:
             pygame.draw.rect(screen, RED,
@@ -471,6 +499,7 @@ def interface():
             )
         else:
             pygame.draw.rect(screen, RED, [x - 10, y + 15, 20, 2])
+
 def draw_field():
     screen.blit(grass_surf, (0, 0))
     all_dots.draw(screen)
@@ -480,9 +509,11 @@ def draw_field():
     all_players.draw(screen)
     bullets.draw(screen)
     all_expls.draw(screen)
+
 def draw_dirt(x, y):
     grass_surf.blit(pygame.transform.rotate(
         dirt, random.randint(0, 360)),(x - 40, y - 40))
+
 def check_coli(radius):
     not_founded = True
     while not_founded:
@@ -496,15 +527,18 @@ def check_coli(radius):
             False, pygame.sprite.collide_circle
             )
         not_founded = False
+        dum.kill()
         if hits or hints:
             not_founded = True
     return (x, y)
-def draw_text(text, size, x, y):
+
+def draw_text(text, size, x, y, colour):
     font = pygame.font.SysFont("arial", size)
-    text_surface = font.render(text, True, BLACK)
+    text_surface = font.render(text, True, colour)
     text_rect = text_surface.get_rect()
     text_rect.midtop = (x, y)
     screen.blit(text_surface, text_rect)
+
 def draw_ammobar(ammo):
     ammobar = pygame.Surface((100, 10))
     ammobar.fill(BAR_COLOUR)
@@ -513,33 +547,45 @@ def draw_ammobar(ammo):
         pygame.draw.rect(ammobar, RED, [i * 7 + 4, 0, 1, 1])
         pygame.draw.rect(ammobar, BLACK, [i * 7 + 3, 1, 3, 2])
     return ammobar
+
 # инициализация
+
+
+player_1_name = "player 1"
+player_2_name = "player 2"
+"""
+player_1_name = input("Игрок 1, пожалуйста, введите свое имя: ")
+player_2_name = input("Игрок 2, пожалуйста, введите свое имя: ")
+"""
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TANKS")
 clock = pygame.time.Clock()
+
 # загрузка изображений
+
+directory = sysargv[0]
 dirt = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "dirt_expl.png"
+    directory, "..", "tanks_game_images", "dirt_expl.png"
     )), (80, 80)).convert()
 dirt.set_colorkey(WHITE)
 player_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "tank1.png"
+    directory, "..", "tanks_game_images", "tank1.png"
     )), (60, 60)).convert()
 mine_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "mine.png"
+    directory, "..", "tanks_game_images", "mine.png"
     )), (15, 15)).convert()
 destr_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "destr_tank.png"
+    directory, "..", "tanks_game_images", "destr_tank.png"
     )), (60, 60)).convert()
 dot_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "dot.png"
+    directory, "..", "tanks_game_images", "dot.png"
     )), (100, 100)).convert()
 supply_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "supply.png"
+    directory, "..", "tanks_game_images", "supply.png"
     )), (40, 40)).convert()
 grass_img = pygame.transform.scale(pygame.image.load(pathlib.Path(
-    r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", "grass.png"
+    directory, "..", "tanks_game_images", "grass.png"
     )), (1200, 1000)).convert()
 grass_surf = pygame.Surface((1000, 1000))
 grass_surf.blit(grass_img, (0, 0))
@@ -547,15 +593,17 @@ shoot_img = []
 for i in range(2):
     filename = 'shoot{}.png'.format(i+1)
     shoot_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
-        r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
+        directory, "..", "tanks_game_images", filename
         )), (20, 20)).convert())
 expl_img = []
 for i in range(8):
     filename = 'expl{}.png'.format(i)
     expl_img.append(pygame.transform.scale(pygame.image.load(pathlib.Path(
-        r"C:\Users\^_^\Desktop\proga\tanks", "tanks_game_images", filename
+        directory, "..", "tanks_game_images", filename
         )), (150, 150)).convert())
+
 # начало основной части 
+
 all_players = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_expls = pygame.sprite.Group()
@@ -564,12 +612,16 @@ all_dots = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 all_destr = pygame.sprite.Group()
 all_mines = pygame.sprite.Group()
-player1 = Player(WIDTH / 4, HEIGHT / 4 )
+
+player1 = Player(WIDTH / 4, HEIGHT / 4)
 player2 = Player(3 * WIDTH / 4, 3 * HEIGHT / 4)
+
 Dot(500, 400, 0)
 Dot(300, 200, 50)
 Dot(800, 600, -130)
+
 #all_sprites.add(player1, player2)
+
 while GAME_RUNNUNG:
     clock.tick(FPS)
     keys_upravl()
